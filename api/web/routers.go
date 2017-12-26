@@ -6,7 +6,6 @@ import (
 
 // CreateRoutes comment
 func CreateRoutes() *mux.Router {
-
 	router := mux.NewRouter()
 
 	router.HandleFunc("/", RootHandler).Methods("GET")
@@ -19,5 +18,4 @@ func CreateRoutes() *mux.Router {
 	router.HandleFunc("/books/filter", GetFilteredBooksHandler).Methods("POST")
 
 	return router
-
 }
