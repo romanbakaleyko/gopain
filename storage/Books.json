@@ -1,9 +1,9 @@
 [
 	{
-		"id": "1349A807-87CA-446C-9740-480238489517",
-		"title": "Book title1",
-		"ganres": ["detective", "comedy"],
-		"pages": 321,
-		"price": 12.43
+		"ID": "1349A807-87CA-446C-9740-480238489517",
+		"Title": "Book title1",
+		"Genres": ["detective", "comedy"],
+		"Pages": 321,
+		"Price": 12.43
     }
 ]
