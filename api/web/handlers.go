@@ -5,17 +5,16 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/gopain/storage"
+	"github.com/romanbakaleyko/gopain/storage"
 )
 
 // RootHandler
 func RootHandler(w http.ResponseWriter, _ *http.Request) {
 
-	_, err := fmt.Fprintf(w, "Welcome to the library, to get more info use /helper URL")
+	_, err := fmt.Fprint(w, "Welcome to the library, to get more info use /helper URL")
 	if err != nil {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		log.Println(err)
-		return
 	}
 }
 
@@ -41,7 +40,6 @@ func HelperHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		log.Println(err)
-		return
 	}
 }
 

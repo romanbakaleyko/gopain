@@ -8,6 +8,7 @@ import (
 	"log"
 	"path/filepath"
 
+	errors2 "github.com/pkg/errors"
 	"github.com/twinj/uuid"
 )
 
@@ -24,6 +25,8 @@ type Book struct {
 type Books []Book
 
 var storagePath = flag.String("storagePath", "storage/Books.json", "path to the storage file")
+
+var errNotValid = errors.New("bad input, missing values for some fields")
 
 func getPathToFS() (string, error) {
 	path, err := filepath.Abs(*storagePath)
@@ -42,15 +45,14 @@ func writeData(books Books) error {
 	}
 
 	booksBytes, err := json.MarshalIndent(books, "", "    ")
-
 	if err != nil {
 		return err
 	}
+
 	return ioutil.WriteFile(path, booksBytes, 0644)
 }
 
 func readData() ([]byte, error) {
-
 	path, err := getPathToFS()
 	if err != nil {
 		return nil, err
@@ -74,11 +76,7 @@ func GetBooks() (Books, error) {
 		return nil, err
 	}
 
-	if err := json.Unmarshal(raw, &books); err != nil {
-		return nil, err
-	}
-
-	return books, nil
+	return books, errors2.Wrap(json.Unmarshal(raw, &books), "AAAA")
 }
 
 // GetBookByID comment
@@ -86,16 +84,15 @@ func GetBookByID(id string) {}
 
 //AddBook comment
 func AddBook(book Book) error {
-	err := errors.New("bad input, missing values for some fields")
 	switch {
 	case book.Genres == nil:
-		return err
+		return errNotValid
 	case book.Pages == 0:
-		return err
+		return errNotValid
 	case book.Price == 0:
-		return err
+		return errNotValid
 	case book.Title == "":
-		return err
+		return errNotValid
 	}
 
 	books, err := GetBooks()
