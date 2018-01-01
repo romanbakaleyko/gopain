@@ -1,9 +1,28 @@
 [
-	{
-		"ID": "1349A807-87CA-446C-9740-480238489517",
-		"Title": "Book title1",
-		"Genres": ["detective", "comedy"],
-		"Pages": 321,
-		"Price": 12.43
+    {
+        "id": "b2b4bf30-556c-4440-b58d-863abd7adbcb",
+        "title": "Test title",
+        "genre": [
+            "testgenre"
+        ],
+        "pages": 33,
+        "price": 121
+    },
+    {
+        "id": "a8dc55c3-1a4e-492f-9ef2-a8dcfced2804",
+        "title": "Test2 title",
+        "genre": [
+            "testgenre",
+            "vegas"
+        ],
+        "pages": 777,
+        "price": 33
+    },
+    {
+        "id": "0d0280ed-2bf3-4056-a7c4-daf70e7b6411",
+        "title": "",
+        "genre": null,
+        "pages": 777,
+        "price": 0
     }
 ]

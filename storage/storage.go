@@ -5,28 +5,22 @@ import (
 	"errors"
 	"flag"
 	"io/ioutil"
-	"log"
 	"path/filepath"
+	"sync"
 
 	errors2 "github.com/pkg/errors"
 	"github.com/twinj/uuid"
 )
 
-//Book comment
-type Book struct {
-	ID     string   `json:"id, omitempty"`
-	Title  string   `json:"title, omitempty"`
-	Genres []string `json:"genre, omitempty"`
-	Pages  int      `json:"pages, omitempty"`
-	Price  float32  `json:"price, omitempty"`
-}
+var (
+	storagePath = flag.String("storagePath", "storage/Books.json", "path to the storage file")
+	fileMutex   sync.Mutex
+)
 
-//Books comment
-type Books []Book
-
-var storagePath = flag.String("storagePath", "storage/Books.json", "path to the storage file")
-
-var errNotValid = errors.New("bad input, missing values for some fields")
+var (
+	// For errors.
+	errNoBookFound = errors.New("requested book doesn't exist")
+)
 
 func getPathToFS() (string, error) {
 	path, err := filepath.Abs(*storagePath)
@@ -39,6 +33,9 @@ func getPathToFS() (string, error) {
 }
 
 func writeData(books Books) error {
+	// Will that work ?
+	fileMutex.Lock()
+	defer fileMutex.Unlock()
 	path, err := getPathToFS()
 	if err != nil {
 		return err
@@ -68,32 +65,37 @@ func readData() ([]byte, error) {
 
 // GetBooks comment
 func GetBooks() (Books, error) {
-	log.Println(">>> Getting books from a storage.")
 	var books Books
 
 	raw, err := readData()
 	if err != nil {
-		return nil, err
+		return nil, errors2.Wrap(err, "Couldn't read data from storage")
 	}
 
-	return books, errors2.Wrap(json.Unmarshal(raw, &books), "AAAA")
+	return books, errors2.Wrap(json.Unmarshal(raw, &books), "Couldn't get books from storage")
 }
 
 // GetBookByID comment
-func GetBookByID(id string) {}
+func GetBookByID(id string) (Book, int, error) {
+
+	var book Book
+	books, err := GetBooks()
+
+	if err != nil {
+		return book, 0, errors2.Wrap(err, "Couldn't get book by ID")
+	}
+
+	for idx, book := range books {
+		if book.ID == id {
+			return book, idx, nil
+		}
+	}
+
+	return book, 0, errNoBookFound
+}
 
 //AddBook comment
 func AddBook(book Book) error {
-	switch {
-	case book.Genres == nil:
-		return errNotValid
-	case book.Pages == 0:
-		return errNotValid
-	case book.Price == 0:
-		return errNotValid
-	case book.Title == "":
-		return errNotValid
-	}
 
 	books, err := GetBooks()
 	if err != nil {
@@ -107,4 +109,42 @@ func AddBook(book Book) error {
 }
 
 //DeleteBook comment
-func DeleteBook() {}
+func DeleteBook(id string) error {
+	books, err := GetBooks()
+	if err != nil {
+		return err
+	}
+
+	_, idx, err := GetBookByID(id)
+
+	if err != nil {
+		return err
+	}
+
+	books = append(books[:idx], books[idx+1:]...)
+	return writeData(books)
+
+}
+
+//UpdateBook comment
+func UpdateBook(id string, updatedBook Book) error {
+
+	books, err := GetBooks()
+	if err != nil {
+		return err
+	}
+
+	_, idx, err := GetBookByID(id)
+	if err != nil {
+		return err
+	}
+
+	book := &books[idx]
+	book.Price = updatedBook.Price
+	book.Title = updatedBook.Title
+	book.Pages = updatedBook.Pages
+	book.Genres = updatedBook.Genres
+
+	return writeData(books)
+
+}

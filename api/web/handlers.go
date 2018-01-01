@@ -1,64 +1,204 @@
 package web
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
-	"log"
 	"net/http"
 
+	"github.com/gorilla/mux"
+	errors2 "github.com/pkg/errors"
 	"github.com/romanbakaleyko/gopain/storage"
+	log "github.com/sirupsen/logrus"
+	"github.com/twinj/uuid"
 )
 
-// RootHandler
-func RootHandler(w http.ResponseWriter, _ *http.Request) {
-
-	_, err := fmt.Fprint(w, "Welcome to the library, to get more info use /helper URL")
-	if err != nil {
-		w.WriteHeader(http.StatusServiceUnavailable)
-		log.Println(err)
-	}
-}
-
-//
-func HelperHandler(w http.ResponseWriter, r *http.Request) {
-
-	msg := `This is short helper to help you query beter:
+const helperMessage = `This is short helper to help you query beter:
 *==*==*==*==*==*==*==*==*==*==*==*==*==*==*==*==*==*==*==*==*==*==*==*==*
 	
 	[/] [GET]		Welcome page
 	[/helper] [GET]		Helper
 	[/books] [GET]		Get all books from the lib
+	[/books] [POST]		Add a book; fields: {Title:string, Genres: []string, Pages: int, Price: float32}
 	[/books/filter] [POST]  	Get all books from the lib and filter them
-	[/book/[id]] [GET]   	Get a book by ID
-	[/book/[id]] [POST]		Add a book
-	[/book/[id]] [PUT]   	Update existing book by ID
-	[/book/[id]] [DELETE]	Delete a book by ID
-
+	[/books/[id]] [GET]   	Get a book by ID
+	[/books/[id]] [PUT]   	Update existing book by ID
+	[/books/[id]] [DELETE]	Delete a book by ID
 
 `
 
-	_, err := fmt.Fprintf(w, msg)
+var (
+	errMissedGenre = errors.New("bad input, missing values for field genre")
+	errMissedPages = errors.New("bad input, missing values for field pages")
+	errMissedPrice = errors.New("bad input, missing values for field price")
+	errMissedTitle = errors.New("bad input, missing values for field title")
+)
+
+// RootHandler comment
+func RootHandler(w http.ResponseWriter, _ *http.Request) {
+
+	_, err := fmt.Fprint(w, "Welcome to the library, to get more info use /helper URL")
+	log.Info("Welcome to lib")
 	if err != nil {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		log.Println(err)
 	}
 }
 
-// GetBooks
-func GetBooksHandler(w http.ResponseWriter, r *http.Request) {
-	storage.GetBooks()
+//HelperHandler
+func HelperHandler(w http.ResponseWriter, r *http.Request) {
+
+	_, err := fmt.Fprintf(w, helperMessage)
+	if err != nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		log.Println(err)
+	}
 }
 
-// GetBook
-func GetBookHandler(w http.ResponseWriter, r *http.Request) {}
+// GetBooks handles GET
+func GetBooksHandler(w http.ResponseWriter, r *http.Request) {
+
+	books, err := storage.GetBooks()
+
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	err = json.NewEncoder(w).Encode(books)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+}
+
+func validateID(r *http.Request) (string, error) {
+
+	vars := mux.Vars(r)
+	id, ok := vars["id"]
+
+	_, err := uuid.Parse(id)
+
+	if !ok || err != nil {
+		return "", err
+	}
+
+	return id, nil
+
+}
+
+func validateBookFields(r *http.Request) (storage.Book, error) {
+
+	var book storage.Book
+	err := errors2.Wrap(json.NewDecoder(r.Body).Decode(&book), "Couldn't decode body")
+	if err != nil {
+		log.Info(err)
+		return book, err
+	}
+
+	switch {
+	case book.Genres == nil:
+		return book, errMissedGenre
+	case book.Pages == 0:
+		return book, errMissedPages
+	case book.Price == 0:
+		return book, errMissedPrice
+	case book.Title == "":
+		return book, errMissedTitle
+	}
+
+	return book, nil
+}
+
+// GetBook handles GET
+func GetBookHandler(w http.ResponseWriter, r *http.Request) {
+
+	id, err := validateID(r)
+
+	if err != nil {
+		log.Info("Bad request")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	book, _, err := storage.GetBookByID(id)
+	if err != nil {
+		log.Info(err)
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	err = json.NewEncoder(w).Encode(book)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+}
 
 //CreateBook
-func AddBookHandler(w http.ResponseWriter, r *http.Request) {}
+func AddBookHandler(w http.ResponseWriter, r *http.Request) {
+
+	book, err := validateBookFields(r)
+	if err != nil {
+		log.Info(err)
+		w.WriteHeader(http.StatusBadRequest)
+	}
+
+	err = storage.AddBook(book)
+	if err != nil {
+		log.Info(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+
+}
 
 //DeleteBook
-func DeleteBookHandler(w http.ResponseWriter, r *http.Request) {}
+func DeleteBookHandler(w http.ResponseWriter, r *http.Request) {
+
+	id, err := validateID(r)
+	if err != nil {
+		log.Info(err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	err = storage.DeleteBook(id)
+	if err != nil {
+		log.Info(err)
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+}
 
 //GetFilteredBooksHandler
 func GetFilteredBooksHandler(w http.ResponseWriter, r *http.Request) {}
 
 //UpdateBookHandler
-func UpdateBookHandler(w http.ResponseWriter, r *http.Request) {}
+func UpdateBookHandler(w http.ResponseWriter, r *http.Request) {
+
+	id, err := validateID(r)
+	if err != nil {
+		log.Info(err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// This is not what I wanted to get. Need to discuss.
+	book, err := validateBookFields(r)
+	if err != nil {
+		log.Info(err)
+		w.WriteHeader(http.StatusBadRequest)
+	}
+
+	err = storage.UpdateBook(id, book)
+	if err != nil {
+		log.Info(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+}
