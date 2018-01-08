@@ -2,6 +2,8 @@ package storage
 
 import (
 	"github.com/jinzhu/gorm"
+	_ "github.com/jinzhu/gorm/dialects/sqlite"
+	"github.com/pkg/errors"
 )
 
 type sqliteStorage struct {
@@ -12,7 +14,7 @@ func NewSqliteStorage(path string) (*sqliteStorage, error) {
 
 	db, err := gorm.Open("sqlite3", path)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "couldn't open database")
 	}
 
 	// Display SQL queries
@@ -24,10 +26,7 @@ func NewSqliteStorage(path string) (*sqliteStorage, error) {
 	if !db.HasTable(&Book{}) {
 
 		if err = db.CreateTable(&Book{}).Error; err != nil {
-			return nil, err
-		}
-		if err = db.Set("gorm:table_options", "ENGINE=InnoDB").CreateTable(&Book{}).Error; err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "couldn't create table")
 		}
 	}
 
