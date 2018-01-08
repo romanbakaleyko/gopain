@@ -1,12 +1,14 @@
 package storage
 
+import "github.com/lib/pq"
+
 //Book comment
 type Book struct {
-	ID     string   `json:"id, omitempty"`
-	Title  string   `json:"title, omitempty"`
-	Genres []string `json:"genre, omitempty"`
-	Pages  int      `json:"pages, omitempty"`
-	Price  float32  `json:"price, omitempty"`
+	ID     string         `json:"id, omitempty"`
+	Title  string         `json:"title, omitempty"`
+	Genres pq.StringArray `json:"genre, omitempty"`
+	Pages  int            `json:"pages, omitempty"`
+	Price  float32        `json:"price, omitempty"`
 }
 
 //Books comment

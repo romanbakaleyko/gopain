@@ -3,8 +3,8 @@ package storage
 import (
 	"encoding/json"
 	"errors"
-	"flag"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"sync"
 
@@ -13,8 +13,7 @@ import (
 )
 
 var (
-	storagePath = flag.String("storagePath", "storage/Books.json", "path to the storage file")
-	fileMutex   sync.Mutex
+	fileMutex sync.Mutex
 )
 
 var (
@@ -22,40 +21,50 @@ var (
 	errNoBookFound = errors.New("requested book doesn't exist")
 )
 
-func getPathToFS() (string, error) {
-	path, err := filepath.Abs(*storagePath)
-	if err != nil {
-		return "", err
-	}
-
-	return path, nil
-
+type fileStorage struct {
+	storage string
 }
 
-func writeData(books Books) error {
-	// Will that work ?
+func NewFileStorage(path string) (*fileStorage, error) {
+
+	storagePath, err := filepath.Abs(path)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err = os.Stat(path); os.IsNotExist(err) {
+		file, err := os.Create(storagePath)
+		if err != nil {
+			return nil, err
+		}
+		defer file.Close()
+		_, err = file.WriteString("[]")
+		if err != nil {
+			return nil, err
+		}
+
+	}
+
+	return &fileStorage{
+		storage: storagePath,
+	}, nil
+}
+
+func (s *fileStorage) writeData(books Books) error {
 	fileMutex.Lock()
 	defer fileMutex.Unlock()
-	path, err := getPathToFS()
-	if err != nil {
-		return err
-	}
 
 	booksBytes, err := json.MarshalIndent(books, "", "    ")
 	if err != nil {
 		return err
 	}
 
-	return ioutil.WriteFile(path, booksBytes, 0644)
+	return ioutil.WriteFile(s.storage, booksBytes, 0644)
 }
 
-func readData() ([]byte, error) {
-	path, err := getPathToFS()
-	if err != nil {
-		return nil, err
-	}
+func (s *fileStorage) readData() ([]byte, error) {
 
-	raw, err := ioutil.ReadFile(path)
+	raw, err := ioutil.ReadFile(s.storage)
 	if err != nil {
 		return nil, err
 	}
@@ -64,10 +73,10 @@ func readData() ([]byte, error) {
 }
 
 // GetBooks comment
-func GetBooks() (Books, error) {
+func (s *fileStorage) GetBooks() (Books, error) {
 	var books Books
 
-	raw, err := readData()
+	raw, err := s.readData()
 	if err != nil {
 		return nil, errors2.Wrap(err, "Couldn't read data from storage")
 	}
@@ -76,10 +85,10 @@ func GetBooks() (Books, error) {
 }
 
 // GetBookByID comment
-func GetBookByID(id string) (Book, int, error) {
+func (s *fileStorage) GetBookByID(id string) (Book, int, error) {
 
 	var book Book
-	books, err := GetBooks()
+	books, err := s.GetBooks()
 
 	if err != nil {
 		return book, 0, errors2.Wrap(err, "Couldn't get book by ID")
@@ -95,9 +104,9 @@ func GetBookByID(id string) (Book, int, error) {
 }
 
 //AddBook comment
-func AddBook(book Book) error {
+func (s *fileStorage) AddBook(book Book) error {
 
-	books, err := GetBooks()
+	books, err := s.GetBooks()
 	if err != nil {
 		return err
 	}
@@ -105,36 +114,36 @@ func AddBook(book Book) error {
 	book.ID = uuid.NewV4().String()
 	books = append(books, book)
 
-	return writeData(books)
+	return s.writeData(books)
 }
 
 //DeleteBook comment
-func DeleteBook(id string) error {
-	books, err := GetBooks()
+func (s *fileStorage) DeleteBook(id string) error {
+	books, err := s.GetBooks()
 	if err != nil {
 		return err
 	}
 
-	_, idx, err := GetBookByID(id)
+	_, idx, err := s.GetBookByID(id)
 
 	if err != nil {
 		return err
 	}
 
 	books = append(books[:idx], books[idx+1:]...)
-	return writeData(books)
+	return s.writeData(books)
 
 }
 
 //UpdateBook comment
-func UpdateBook(id string, updatedBook Book) error {
+func (s *fileStorage) UpdateBook(id string, updatedBook Book) error {
 
-	books, err := GetBooks()
+	books, err := s.GetBooks()
 	if err != nil {
 		return err
 	}
 
-	_, idx, err := GetBookByID(id)
+	_, idx, err := s.GetBookByID(id)
 	if err != nil {
 		return err
 	}
@@ -145,6 +154,6 @@ func UpdateBook(id string, updatedBook Book) error {
 	book.Pages = updatedBook.Pages
 	book.Genres = updatedBook.Genres
 
-	return writeData(books)
+	return s.writeData(books)
 
 }
