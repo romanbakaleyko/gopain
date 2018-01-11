@@ -142,8 +142,12 @@ func (h *handler) GetBookHandler(w http.ResponseWriter, r *http.Request) {
 
 	book, _, err := h.storage.GetBookByID(id)
 	if err != nil {
-		log.Info(err)
-		w.WriteHeader(http.StatusNoContent)
+		if err == storage.ErrNoBookFound {
+			log.Info(err)
+			w.WriteHeader(http.StatusNotFound)
+		}
+		log.Warn(err)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
@@ -187,8 +191,12 @@ func (h *handler) DeleteBookHandler(w http.ResponseWriter, r *http.Request) {
 
 	err = h.storage.DeleteBook(id)
 	if err != nil {
-		log.Info(err)
-		w.WriteHeader(http.StatusNotFound)
+		if err == storage.ErrNoBookFound {
+			log.Info(err)
+			w.WriteHeader(http.StatusNotFound)
+		}
+		log.Warn(err)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
@@ -216,7 +224,11 @@ func (h *handler) UpdateBookHandler(w http.ResponseWriter, r *http.Request) {
 
 	err = h.storage.UpdateBook(id, book)
 	if err != nil {
-		log.Info(err)
+		if err == storage.ErrNoBookFound {
+			log.Info(err)
+			w.WriteHeader(http.StatusNotFound)
+		}
+		log.Warn(err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

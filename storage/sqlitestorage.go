@@ -30,28 +30,30 @@ func NewSqliteStorage(path string) (*sqliteStorage, error) {
 		}
 	}
 
-	return &sqliteStorage{
-		storage: db,
-	}, nil
+	return &sqliteStorage{storage: db}, nil
 }
 
 func (s *sqliteStorage) GetBooks() (Books, error) {
+	panic("not implemented")
 	return nil, nil
-
 }
 
 func (s *sqliteStorage) AddBook(book Book) error {
+	panic("not implemented")
 	return nil
 }
 
 func (s *sqliteStorage) GetBookByID(id string) (Book, int, error) {
+	panic("not implemented")
 	return Book{}, 0, nil
 }
 
 func (s *sqliteStorage) DeleteBook(id string) error {
+	panic("not implemented")
 	return nil
 }
 
 func (s *sqliteStorage) UpdateBook(id string, updatedBook Book) error {
+	panic("not implemented")
 	return nil
 }
