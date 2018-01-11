@@ -19,7 +19,7 @@ var (
 
 var (
 	// For errors.
-	errNoBookFound = errors.New("requested book doesn't exist")
+	ErrNoBookFound = errors.New("requested book doesn't exist")
 )
 
 func getPathToFS() (string, error) {
@@ -91,7 +91,7 @@ func GetBookByID(id string) (Book, int, error) {
 		}
 	}
 
-	return book, 0, errNoBookFound
+	return book, 0, ErrNoBookFound
 }
 
 //AddBook comment
