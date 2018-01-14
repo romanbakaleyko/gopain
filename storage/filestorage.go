@@ -42,9 +42,6 @@ func NewFileStorage(path string) (*fileStorage, error) {
 }
 
 func (s *fileStorage) writeData(books Books) error {
-	s.fileMutex.Lock()
-	defer s.fileMutex.Unlock()
-
 	booksBytes, err := json.MarshalIndent(books, "", "    ")
 	if err != nil {
 		return err
@@ -59,6 +56,12 @@ func (s *fileStorage) readData() ([]byte, error) {
 
 // GetBooks comment
 func (s *fileStorage) GetBooks() (Books, error) {
+	s.fileMutex.RLock() // Write
+	defer s.fileMutex.RUnlock()
+	return s.getBooks()
+}
+
+func (s *fileStorage) getBooks() (Books, error) {
 	var books Books
 
 	raw, err := s.readData()
@@ -89,7 +92,10 @@ func (s *fileStorage) GetBookByID(id string) (Book, int, error) {
 
 //AddBook comment
 func (s *fileStorage) AddBook(book Book) error {
-	books, err := s.GetBooks()
+	s.fileMutex.Lock() // Read/Write
+	defer s.fileMutex.Unlock()
+
+	books, err := s.getBooks()
 	if err != nil {
 		return err
 	}
@@ -102,7 +108,10 @@ func (s *fileStorage) AddBook(book Book) error {
 
 //DeleteBook comment
 func (s *fileStorage) DeleteBook(id string) error {
-	books, err := s.GetBooks()
+	s.fileMutex.Lock() // Read/Write
+	defer s.fileMutex.Unlock()
+
+	books, err := s.getBooks()
 	if err != nil {
 		return err
 	}
@@ -120,7 +129,10 @@ func (s *fileStorage) DeleteBook(id string) error {
 
 //UpdateBook comment
 func (s *fileStorage) UpdateBook(id string, updatedBook Book) error {
-	books, err := s.GetBooks()
+	s.fileMutex.Lock() // Read/Write
+	defer s.fileMutex.Unlock()
+
+	books, err := s.getBooks()
 	if err != nil {
 		return err
 	}
