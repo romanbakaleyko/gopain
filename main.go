@@ -16,6 +16,11 @@ var (
 	dbPath      = flag.String("path", "", "storage/storage.db")
 )
 
+//var storageMap = map[string]func(string) (api.Storage, error){
+//	"sqlite":      storage.NewSqliteStorage,
+//	"filestorage": storage.NewFileStorage,
+//}
+
 func main() {
 
 	flag.Parse()
