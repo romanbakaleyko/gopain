@@ -8,7 +8,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"github.com/romanbakaleyko/gopain/storage"
-	log "github.com/sirupsen/logrus"
+	log  "github.com/sirupsen/logrus"
 	"github.com/twinj/uuid"
 )
 
@@ -25,13 +25,6 @@ const helperMessage = `This is short helper to help you query beter:
 	[/books/[id]] [DELETE]	Delete a book by ID
 
 `
-
-var (
-	errMissedGenre = errors.New("bad input, missing values for field genre")
-	errMissedPages = errors.New("bad input, missing values for field pages")
-	errMissedPrice = errors.New("bad input, missing values for field price")
-	errMissedTitle = errors.New("bad input, missing values for field title")
-)
 
 type handler struct {
 	storage Storage
@@ -58,7 +51,7 @@ func (h *handler) RootHandler(w http.ResponseWriter, _ *http.Request) {
 	log.Info("Welcome to lib")
 	if err != nil {
 		w.WriteHeader(http.StatusServiceUnavailable)
-		log.Println(err)
+		log.Warn(err)
 	}
 }
 
@@ -68,7 +61,7 @@ func (h *handler) HelperHandler(w http.ResponseWriter, r *http.Request) {
 	_, err := fmt.Fprintf(w, helperMessage)
 	if err != nil {
 		w.WriteHeader(http.StatusServiceUnavailable)
-		log.Println(err)
+		log.Warn(err)
 	}
 }
 
@@ -94,44 +87,18 @@ func (h *handler) GetBooksHandler(w http.ResponseWriter, r *http.Request) {
 func (h *handler) validateID(r *http.Request) (string, error) {
 
 	vars := mux.Vars(r)
-	id, ok := vars["id"]
+	id := vars["id"]
 
 	_, err := uuid.Parse(id)
 
-	if !ok || err != nil {
-		return "", err
-	}
+	return id, err
 
-	return id, nil
-
-}
-
-func (h *handler) validateBookFields(r *http.Request) (storage.Book, error) {
-
-	var book storage.Book
-	err := errors.Wrap(json.NewDecoder(r.Body).Decode(&book), "Couldn't decode body")
-	if err != nil {
-		log.Info(err)
-		return book, err
-	}
-
-	switch {
-	case book.Genres == nil:
-		return book, errMissedGenre
-	case book.Pages == 0:
-		return book, errMissedPages
-	case book.Price == 0:
-		return book, errMissedPrice
-	case book.Title == "":
-		return book, errMissedTitle
-	}
-
-	return book, nil
 }
 
 // GetBook handles GET
 func (h *handler) GetBookHandler(w http.ResponseWriter, r *http.Request) {
 
+	// No need to validate here
 	id, err := h.validateID(r)
 
 	if err != nil {
@@ -145,6 +112,7 @@ func (h *handler) GetBookHandler(w http.ResponseWriter, r *http.Request) {
 		if err == storage.ErrNoBookFound {
 			log.Info(err)
 			w.WriteHeader(http.StatusNotFound)
+			return
 		}
 		log.Warn(err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -162,10 +130,19 @@ func (h *handler) GetBookHandler(w http.ResponseWriter, r *http.Request) {
 //CreateBook
 func (h *handler) AddBookHandler(w http.ResponseWriter, r *http.Request) {
 
-	book, err := h.validateBookFields(r)
+	var book storage.Book
+	err := errors.Wrap(json.NewDecoder(r.Body).Decode(&book), "Couldn't decode body");
 	if err != nil {
 		log.Info(err)
 		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	err = book.ValidateBookFields()
+	if err != nil {
+		log.Info(err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
 
 	err = h.storage.AddBook(book)
@@ -182,6 +159,7 @@ func (h *handler) AddBookHandler(w http.ResponseWriter, r *http.Request) {
 //DeleteBook
 func (h *handler) DeleteBookHandler(w http.ResponseWriter, r *http.Request) {
 
+	// No need to validate here ?
 	id, err := h.validateID(r)
 	if err != nil {
 		log.Info(err)
@@ -208,6 +186,7 @@ func (h *handler) GetFilteredBooksHandler(w http.ResponseWriter, r *http.Request
 //UpdateBookHandler
 func (h *handler) UpdateBookHandler(w http.ResponseWriter, r *http.Request) {
 
+	// Move validate to model
 	id, err := h.validateID(r)
 	if err != nil {
 		log.Info(err)
@@ -215,11 +194,19 @@ func (h *handler) UpdateBookHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// This is not what I wanted to get. Need to discuss.
-	book, err := h.validateBookFields(r)
+	var book storage.Book
+	err = errors.Wrap(json.NewDecoder(r.Body).Decode(&book), "Couldn't decode body")
 	if err != nil {
 		log.Info(err)
 		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	err = book.ValidateBookFields()
+	if err != nil {
+		log.Info(err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
 
 	err = h.storage.UpdateBook(id, book)
