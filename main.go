@@ -38,25 +38,24 @@ func main() {
 	//}
 	//routes = web.CreateRoutes(web.NewHandler(storage))
 
-		switch *storageType {
-	case "sqlite":
-		sqliteStorage, err := storage.NewSqliteStorage(*dbPath)
-		if err != nil {
-			log.Fatal(errors.Wrap(err, "Couldn't set up storage"))
-		}
-		routes = web.CreateRoutes(web.NewHandler(sqliteStorage))
+	switch *storageType {
+		case "sqlite":
+			sqliteStorage, err := storage.NewSqliteStorage(*dbPath)
+			if err != nil {
+				log.Fatal(errors.Wrap(err, "Couldn't set up storage"))
+			}
+			routes = web.CreateRoutes(web.NewHandler(sqliteStorage))
 
-	case "filestorage":
-		fs, err := storage.NewFileStorage(*dbPath)
-		if err != nil {
-			log.Fatal(errors.Wrap(err, "Couldn't set up storage"))
-		}
-		routes = web.CreateRoutes(web.NewHandler(fs))
+		case "filestorage":
+			fs, err := storage.NewFileStorage(*dbPath)
+			if err != nil {
+				log.Fatal(errors.Wrap(err, "Couldn't set up storage"))
+			}
+			routes = web.CreateRoutes(web.NewHandler(fs))
 
-	default:
-		log.Fatal("Couldn't set up a storage, no storage specidied")
-
-	}
+		default:
+			log.Fatal("Couldn't set up a storage, no storage specidied")
+			}
 
 	if err := http.ListenAndServe(":8000", routes); err != nil {
 		log.Fatal(err)
