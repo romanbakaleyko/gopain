@@ -15,11 +15,6 @@ var (
 	storageType = flag.String("storage", "", "--storage slite")
 	dbPath      = flag.String("path", "", "storage/storage.db")
 )
-//
-//var storageMap = map[string]func(string) (web.Storage, error){
-//	"sqlite":      storage.NewSqliteStorage,
-//	"filestorage": storage.NewFileStorage,
-//}
 
 func main() {
 
@@ -27,34 +22,23 @@ func main() {
 
 	var routes *mux.Router
 
-	//storageInit, ok := storageMap[*storageType]
-	//if !ok{
-	//	log.Fatal("Couldn't set up storage %s, no storage specidied", *storageType)
-	//}
-	//
-	//storage, err := storageInit(*dbPath)
-	//if err != nil {
-	//	log.Fatal(errors.Wrap(err, "Couldn't set up storage"))
-	//}
-	//routes = web.CreateRoutes(web.NewHandler(storage))
-
 	switch *storageType {
 		case "sqlite":
 			sqliteStorage, err := storage.NewSqliteStorage(*dbPath)
 			if err != nil {
-				log.Fatal(errors.Wrap(err, "Couldn't set up storage"))
+				log.Fatal(errors.Wrap(err, "couldn't set up sqlite storage"))
 			}
 			routes = web.CreateRoutes(web.NewHandler(sqliteStorage))
 
 		case "filestorage":
 			fs, err := storage.NewFileStorage(*dbPath)
 			if err != nil {
-				log.Fatal(errors.Wrap(err, "Couldn't set up storage"))
+				log.Fatal(errors.Wrap(err, "couldn't set up file storage"))
 			}
 			routes = web.CreateRoutes(web.NewHandler(fs))
 
 		default:
-			log.Fatal("Couldn't set up a storage, no storage specidied")
+			log.Fatal("couldn't set up a storage, no storage specified")
 			}
 
 	if err := http.ListenAndServe(":8000", routes); err != nil {

@@ -8,7 +8,6 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
-	"github.com/twinj/uuid"
 )
 
 type fileStorage struct {
@@ -75,7 +74,7 @@ func (s *fileStorage) getBooks() (Books, error) {
 // GetBookByID comment
 func (s *fileStorage) GetBookByID(id string) (Book, int, error) {
 	var book Book
-	books, err := s.GetBooks()
+	books, err := s.getBooks()
 
 	if err != nil {
 		return book, 0, errors.Wrap(err, "Couldn't get book by ID")
@@ -100,7 +99,7 @@ func (s *fileStorage) AddBook(book Book) error {
 		return err
 	}
 
-	book.ID = uuid.NewV4().String()
+	book.InitBook()
 	books = append(books, book)
 
 	return s.writeData(books)
@@ -143,6 +142,7 @@ func (s *fileStorage) UpdateBook(id string, updatedBook Book) error {
 	}
 
 	// What would happen if user omits some field?
+	//TODO: rework this here and in sqlstorage
 	book := &books[idx]
 	book.Price = updatedBook.Price
 	book.Title = updatedBook.Title

@@ -34,26 +34,57 @@ func NewSqliteStorage(path string) (*sqliteStorage, error) {
 }
 
 func (s *sqliteStorage) GetBooks() (Books, error) {
-	panic("not implemented")
-	return nil, nil
+    var books Books
+	return books, s.storage.Find(&books).Error
 }
 
 func (s *sqliteStorage) AddBook(book Book) error {
-	panic("not implemented")
-	return nil
+    book.InitBook()
+	return s.storage.Create(&book).Error
 }
 
+//GetBookByID TODO: rework this, since for sqlite storage return index to update books doesn't make sense, need
+// to create internal function for getting ID for filestorage.
 func (s *sqliteStorage) GetBookByID(id string) (Book, int, error) {
-	panic("not implemented")
-	return Book{}, 0, nil
+	var book Book
+	err := s.storage.Where("id = ?", id).First(&book).Error
+	if err == gorm.ErrRecordNotFound {
+		return book, 0, ErrNoBookFound
+	}
+
+	return book, 0, err
 }
 
 func (s *sqliteStorage) DeleteBook(id string) error {
-	panic("not implemented")
+	query := s.storage.Where("id = ?", id).Delete(&Book{})
+	if query.Error != nil {
+		return errors.Wrap(query.Error, "can't delete book")
+	}
+
+	if query.RowsAffected == 0 {
+		return ErrNoBookFound
+	}
+
 	return nil
 }
 
 func (s *sqliteStorage) UpdateBook(id string, updatedBook Book) error {
-	panic("not implemented")
-	return nil
+	book, _, err := s.GetBookByID(id)
+	if err != nil {
+		return err
+	}
+
+	//TODO: rework this here and in the filestorage
+	book.Price = updatedBook.Price
+	book.Title = updatedBook.Title
+	book.Pages = updatedBook.Pages
+	book.Genres = updatedBook.Genres
+
+	err = s.storage.Update(&book).Error
+	if err == gorm.ErrRecordNotFound {
+		return ErrNoBookFound
+	}
+
+	return errors.Wrap(err, "couldn't update book")
 }
+

@@ -2,6 +2,7 @@ package storage
 
 import (
 	"github.com/lib/pq"
+	"github.com/twinj/uuid"
 )
 
 //Book comment
@@ -22,7 +23,7 @@ type BookFilter struct {
 }
 
 //Validate Book fields
-func (b Book) ValidateBookFields() error {
+func (b *Book) ValidateBookFields() error {
 
 	if b.Genres == nil {
 		return ErrMissedGenre
@@ -37,6 +38,11 @@ func (b Book) ValidateBookFields() error {
 		return ErrMissedTitle
 	}
 	return nil
+}
+
+//InitBook Book
+func (b *Book) InitBook() {
+	b.ID = uuid.NewV4().String()
 }
 //
 //func (b Book) ValidateBookId() error{

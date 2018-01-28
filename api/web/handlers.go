@@ -30,6 +30,7 @@ type handler struct {
 	storage Storage
 }
 
+// TODO: rework GetBookByID, move out getting of id from the list of books to update for filestorage
 type Storage interface {
 	GetBooks() (storage.Books, error)
 	GetBookByID(id string) (storage.Book, int, error)
@@ -194,7 +195,9 @@ func (h *handler) UpdateBookHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+
 	var book storage.Book
+
 	err = errors.Wrap(json.NewDecoder(r.Body).Decode(&book), "Couldn't decode body")
 	if err != nil {
 		log.Info(err)
@@ -202,12 +205,13 @@ func (h *handler) UpdateBookHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = book.ValidateBookFields()
-	if err != nil {
-		log.Info(err)
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
+//TODO: Move out it from handlers ?
+	//err = book.ValidateBookFields()
+	//if err != nil {
+	//	log.Info(err)
+	//	w.WriteHeader(http.StatusBadRequest)
+	//	return
+	//}
 
 	err = h.storage.UpdateBook(id, book)
 	if err != nil {
